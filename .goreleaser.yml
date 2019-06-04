@@ -1,0 +1,29 @@
+builds:
+    -
+        binary: terraform-provider-k8s
+        env:
+            - CGO_ENABLED=0
+        # ldflags: "-s -w -X main.version={{ .Version }} -X main.commitHash={{ .ShortCommit }} -X main.buildDate={{ .Date }}"
+        goos:
+            - linux
+            - darwin
+            - windows
+        goarch:
+            - amd64
+
+archive:
+    format_overrides:
+        -
+            goos: windows
+            format: zip
+
+changelog:
+    skip: true
+
+brew:
+    github:
+        owner: banzaicloud
+        name: homebrew-tap
+    folder: Formula
+    homepage: https://banzaicloud.com/
+    description: Kubernetes Terraform provider with support for raw manifests
