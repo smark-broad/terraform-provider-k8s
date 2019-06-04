@@ -1,15 +1,15 @@
-This project has been archived and is unmaintained.
-
 # Kubernetes Terraform Provider
 
 The k8s Terraform provider enables Terraform to deploy Kubernetes resources. Unlike the [official Kubernetes provider][kubernetes-provider] it handles raw manifests, leveraging `kubectl` directly to allow developers to work with any Kubernetes resource natively.
+
+This project is a maintained fork of [ericchiang/terraform-provider-k8s](https://github.com/ericchiang/terraform-provider-k8s).
 
 ## Usage
 
 Use `go get` to install the provider:
 
 ```
-go get -u github.com/ericchiang/terraform-provider-k8s
+go get -u github.com/banzaicloud/terraform-provider-k8s
 ```
 
 Register the plugin in `~/.terraformrc`:
