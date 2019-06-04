@@ -6,8 +6,8 @@ jobs:
             -
                 image: circleci/golang:1.12
                 environment:
-                    GOFLAGS: -mod=readonly
-                    GO111MODULE: "off"
+                    GOFLAGS: -mod=vendor
+                    GO111MODULE: "on"
 
         steps:
             - checkout
@@ -22,8 +22,8 @@ jobs:
             -
                 image: circleci/golang:1.12
                 environment:
-                    GOFLAGS: -mod=readonly
-                    GO111MODULE: "off"
+                    GOFLAGS: -mod=vendor
+                    GO111MODULE: "on"
 
         steps:
             - checkout
