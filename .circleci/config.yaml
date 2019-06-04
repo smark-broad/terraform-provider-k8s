@@ -1,0 +1,53 @@
+version: 2
+
+jobs:
+    build:
+        docker:
+            -
+                image: circleci/golang:1.12
+                environment:
+                    GOFLAGS: -mod=readonly
+                    GO111MODULE: "off"
+
+        steps:
+            - checkout
+
+            -
+                run:
+                    name: Run tests
+                    command: go test .
+
+    release:
+        docker:
+            -
+                image: circleci/golang:1.12
+                environment:
+                    GOFLAGS: -mod=readonly
+                    GO111MODULE: "off"
+
+        steps:
+            - checkout
+
+            -
+                run:
+                    name: Release
+                    command: make release
+
+workflows:
+    version: 2
+    ci:
+        jobs:
+            -
+                build:
+                    filters:
+                        tags:
+                            only: /^v?\d+\.\d+\.\d+(-\S*)?$/
+            -
+                release:
+                    requires:
+                        - build
+                    filters:
+                        tags:
+                            only: /^v?\d+\.\d+\.\d+(-\S*)?$/
+                        branches:
+                            ignore: /.*/
