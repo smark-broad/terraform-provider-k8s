@@ -48,8 +48,8 @@ endif
 
 	go build ${GOARGS} -tags "${GOTAGS}" -ldflags "${LDFLAGS}" -o ${BUILD_DIR}/${BINARY_NAME} .
 
-.PHONY: integration
-integration: build bin/terraform ## Execute integration tests
+.PHONY: test-integration
+test-integration: build bin/terraform ## Execute integration tests
 	cp build/terraform-provider-k8s examples
 	bin/terraform init examples
 	bin/terraform apply -auto-approve examples
@@ -59,7 +59,12 @@ bin/terraform: bin/terraform-${TERRAFORM_VERSION}
 	@ln -sf terraform-${TERRAFORM_VERSION} bin/terraform
 bin/terraform-${TERRAFORM_VERSION}:
 	@mkdir -p bin
+ifeq (${OS}, Darwin)
 	curl -sfL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_darwin_amd64.zip > bin/terraform.zip
+endif
+ifeq (${OS}, Linux)
+	curl -sfL https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip > bin/terraform.zip
+endif
 	unzip -d bin bin/terraform.zip
 	@mv bin/terraform $@
 	rm bin/terraform.zip
