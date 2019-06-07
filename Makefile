@@ -50,10 +50,11 @@ endif
 
 .PHONY: test-integration
 test-integration: build bin/terraform ## Execute integration tests
-	cp build/terraform-provider-k8s examples
+	cp build/terraform-provider-k8s .
 	bin/terraform init examples
 	bin/terraform apply -auto-approve examples
 	bin/terraform destroy -auto-approve examples
+	rm terraform-provider-k8s
 
 bin/terraform: bin/terraform-${TERRAFORM_VERSION}
 	@ln -sf terraform-${TERRAFORM_VERSION} bin/terraform
