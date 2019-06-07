@@ -153,6 +153,7 @@ jobs:
 
         steps:
             - checkout
+            - restore_go_module_cache
 
             -   run:
                     name: Release
