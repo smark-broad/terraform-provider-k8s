@@ -1,2 +1,24 @@
 /bin/
+/build/
 /dist/
+/vendor/
+
+# IDE integration
+/.vscode/*
+!/.vscode/launch.json
+!/.vscode/tasks.json
+/.idea/*
+!/.idea/codeStyles/
+!/.idea/copyright/
+!/.idea/dataSources.xml
+!/.idea/*.iml
+!/.idea/externalDependencies.xml
+!/.idea/go.imports.xml
+!/.idea/modules.xml
+!/.idea/runConfigurations/
+!/.idea/scopes/
+!/.idea/sqldialects.xml
+
+terraform.tfstate
+terraform.tfstate.backup
+.terraform/

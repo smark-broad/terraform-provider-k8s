@@ -1,35 +1,159 @@
-version: 2
+version: 2.1
+
+executors:
+    docker:
+        docker:
+            -   image: circleci/golang:1.12
+                environment:
+                    GOFLAGS: -mod=readonly
+    minikube:
+        machine:
+            image: ubuntu-1604:201903-01
+            docker_layer_caching: true
+        environment:
+            KUBECONFIG: /home/circleci/.kube/config
+            MINIKUBE_WANTUPDATENOTIFICATION: false
+            MINIKUBE_WANTREPORTERRORPROMPT: false
+            MINIKUBE_HOME: /home/circleci
+            CHANGE_MINIKUBE_NONE_USER: true
+            GOPATH: /go
+            DOCKER_LATEST: 1
+
+commands:
+    setup_minikube:
+        description: Setup minikube
+        parameters:
+            minikube_version:
+                type: string
+            kubernetes_version:
+                type: string
+        steps:
+            -   run:
+                    name: Install minikube
+                    command: |
+                        curl -Lo minikube https://github.com/kubernetes/minikube/releases/download/<< parameters.minikube_version >>/minikube-linux-amd64
+                        chmod +x minikube
+                        sudo mv minikube /usr/local/bin/
+            -   run:
+                    name: Start minikube
+                    background: true
+                    command: |
+                        sudo -E minikube start --vm-driver=none --cpus 2 --memory 4096 --kubernetes-version=<< parameters.kubernetes_version >> --extra-config="kubeadm.ignore-preflight-errors=FileExisting-crictl"
+            -   run:
+                    name: Install kubectl
+                    command: |
+                        curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/<< parameters.kubernetes_version >>/bin/linux/amd64/kubectl
+                        chmod +x kubectl
+                        sudo mv kubectl /usr/local/bin/
+                        mkdir -p ${HOME}/.kube
+                        touch ${HOME}/.kube/config
+
+            -   run:
+                    name: Wait for minikube
+                    command: |
+                        timeout 180s bash \<<EOT
+                          set -o pipefail
+                          function is_ready()
+                          {
+                            kubectl get nodes -o json \
+                              | jq '.items[].status.conditions[] | select(.type=="Ready" and .status=="True")'
+                          }
+                          until is_ready
+                          do
+                            sleep 1
+                          done
+                        EOT
+
+    setup_go:
+        description: Setup Go
+        parameters:
+            go_version:
+                type: string
+        steps:
+            -   run:
+                    name: Create Go directory
+                    command: |
+                        sudo mkdir /go
+                        sudo chmod 777 /go
+
+            -   run:
+                    name: Install Go
+                    command: |
+                        sudo rm -rf /usr/local/go
+                        curl -Lo go.linux-amd64.tar.gz https://dl.google.com/go/go<< parameters.go_version >>.linux-amd64.tar.gz
+                        sudo tar -C /usr/local -xzf go.linux-amd64.tar.gz
+                        rm go.linux-amd64.tar.gz
+
+    restore_go_module_cache:
+        description: Restore Go module cache
+        steps:
+            -   restore_cache:
+                    name: Restore Go module cache
+                    keys:
+                        - gomod-v1-{{ checksum "go.sum" }}
+                        - gomod-v1
+
+    integration:
+        description: Integration tests
+        parameters:
+            kubernetes_version:
+                type: string
+        steps:
+            -   setup_minikube:
+                    minikube_version: v1.1.0
+                    kubernetes_version: << parameters.kubernetes_version >>
+            -   setup_go:
+                    go_version: 1.12.5
+            - checkout
+            - restore_go_module_cache
+            -   run:
+                    name: Run integration tests
+                    command: make test-integration
 
 jobs:
-    build:
-        docker:
-            -
-                image: circleci/golang:1.12
-                environment:
-                    GOFLAGS: -mod=vendor
-                    GO111MODULE: "on"
+    checks:
+        executor: docker
 
         steps:
             - checkout
+            - restore_go_module_cache
 
-            -
-                run:
+            -   run:
                     name: Run tests
                     command: go test .
 
+            -   save_cache:
+                    name: Save Go module cache
+                    key: gomod-v1-{{ checksum "go.sum" }}
+                    paths:
+                        - /go/pkg/mod
+
+    integration-test-k8s1-14:
+        executor: minikube
+        steps:
+            -   integration:
+                    kubernetes_version: v1.14.2
+
+    integration-test-k8s1-13:
+        executor: minikube
+        steps:
+            -   integration:
+                    kubernetes_version: v1.13.6
+
+    integration-test-k8s1-12:
+        executor: minikube
+        steps:
+            -   integration:
+                    kubernetes_version: v1.12.9
+
     release:
-        docker:
-            -
-                image: circleci/golang:1.12
-                environment:
-                    GOFLAGS: -mod=vendor
-                    GO111MODULE: "on"
+        executor: docker
 
         steps:
             - checkout
+            - restore_go_module_cache
 
-            -
-                run:
+            -   run:
                     name: Release
                     command: make release
 
@@ -37,15 +161,20 @@ workflows:
     version: 2
     ci:
         jobs:
-            -
-                build:
-                    filters:
-                        tags:
-                            only: /^v?\d+\.\d+\.\d+(-\S*)?$/
-            -
-                release:
+            - checks
+            -   integration-test-k8s1-14:
                     requires:
-                        - build
+                        - checks
+            -   integration-test-k8s1-13:
+                    requires:
+                        - checks
+            -   integration-test-k8s1-12:
+                    requires:
+                        - checks
+            -   release:
+                    requires:
+                        - checks
+                        - integration-test-k8s1-14
                     filters:
                         tags:
                             only: /^v?\d+\.\d+\.\d+(-\S*)?$/
