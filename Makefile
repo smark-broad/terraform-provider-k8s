@@ -19,10 +19,10 @@ TEST_FORMAT = short-verbose
 endif
 
 # Dependency versions
-GOTESTSUM_VERSION = 0.3.4
-GOLANGCI_VERSION = 1.16.0
-GORELEASER_VERSION = 0.108.0
-TERRAFORM_VERSION = 0.11.14
+GOTESTSUM_VERSION = 0.3.5
+GOLANGCI_VERSION = 1.17.1
+GORELEASER_VERSION = 0.113.0
+TERRAFORM_VERSION = 0.12.5
 
 GOLANG_VERSION = 1.12
 
@@ -49,11 +49,12 @@ endif
 	go build ${GOARGS} -tags "${GOTAGS}" -ldflags "${LDFLAGS}" -o ${BUILD_DIR}/${BINARY_NAME} .
 
 .PHONY: test-integration
+test-integration: EXAMPLE_DIR ?= examples/0.12
 test-integration: build bin/terraform ## Execute integration tests
 	cp build/terraform-provider-k8s .
-	bin/terraform init examples
-	bin/terraform apply -auto-approve examples
-	bin/terraform destroy -auto-approve examples
+	bin/terraform init ${EXAMPLE_DIR}
+	bin/terraform apply -auto-approve ${EXAMPLE_DIR}
+	bin/terraform destroy -auto-approve ${EXAMPLE_DIR}
 	rm terraform-provider-k8s
 
 bin/terraform: bin/terraform-${TERRAFORM_VERSION}
