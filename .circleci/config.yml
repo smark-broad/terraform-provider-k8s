@@ -197,10 +197,16 @@ workflows:
     version: 2
     ci:
         jobs:
-            - checks
+            - checks:
+                  filters:
+                      tags:
+                          only: /^v?\d+\.\d+\.\d+(-\S*)?$/
             -   integration-test-012-k8s1-14:
                     requires:
                         - checks
+                    filters:
+                        tags:
+                            only: /^v?\d+\.\d+\.\d+(-\S*)?$/
             -   integration-test-012-k8s1-13:
                     requires:
                         - checks
