@@ -67,6 +67,11 @@ func resourceManifest() *schema.Resource {
 				Required:  true,
 				Sensitive: true,
 			},
+			"namespace": &schema.Schema{
+				Type:      schema.TypeString,
+				Optional:  true,
+				Sensitive: true,
+			},
 		},
 	}
 }
@@ -187,10 +192,10 @@ func resourceManifestUpdate(d *schema.ResourceData, m interface{}) error {
 	return run(cmd)
 }
 
-func resourceFromSelflink(s string) (resource, namespace string, ok bool) {
+func resourceFromSelflink(s string) (resource, namespace string, othernamespace string, ok bool) {
 	parts := strings.Split(s, "/")
-	if len(parts) < 2 {
-		return "", "", false
+	if len(parts) < 3 {
+		return "", "", "", false
 	}
 	resource = parts[len(parts)-2] + "/" + parts[len(parts)-1]
 
@@ -199,18 +204,30 @@ func resourceFromSelflink(s string) (resource, namespace string, ok bool) {
 			namespace = parts[i+1]
 			break
 		}
+		if part == "othernamespaces" && len(parts) > i+1 {
+			namespace = parts[i+1]
+			break
+		}
 	}
-	return resource, namespace, true
+	return resource, namespace, othernamespace, true
+}
+
+func resouceNameSpace(d *schema.ResourceData) string {
+	othernamespace := strings.NewReader(d.Get("namespace").(string))
+	return othernamespace
 }
 
 func resourceManifestDelete(d *schema.ResourceData, m interface{}) error {
-	resource, namespace, ok := resourceFromSelflink(d.Id())
+	resource, namespace, othernamespace, ok := resourceFromSelflink(d.Id())
 	if !ok {
 		return fmt.Errorf("invalid resource id: %s", d.Id())
 	}
 	args := []string{"delete", resource}
 	if namespace != "" {
 		args = append(args, "-n", namespace)
+	}
+	if othernamespace != "" {
+		args = append(args, "-n", othernamespace)
 	}
 	kubeconfig, cleanup, err := kubeconfigPath(m)
 	if err != nil {
@@ -223,7 +240,7 @@ func resourceManifestDelete(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceManifestRead(d *schema.ResourceData, m interface{}) error {
-	resource, namespace, ok := resourceFromSelflink(d.Id())
+	resource, namespace, othernamespace, ok := resourceFromSelflink(d.Id())
 	if !ok {
 		return fmt.Errorf("invalid resource id: %s", d.Id())
 	}
@@ -231,6 +248,9 @@ func resourceManifestRead(d *schema.ResourceData, m interface{}) error {
 	args := []string{"get", "--ignore-not-found", resource}
 	if namespace != "" {
 		args = append(args, "-n", namespace)
+	}
+	if othernamespace != "" {
+		args = append(args, "-n", othernamespace)
 	}
 
 	stdout := &bytes.Buffer{}
